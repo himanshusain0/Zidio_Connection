@@ -1,16 +1,19 @@
 package com.zidio.job_portal.Security;
 
-import java.util.Date;
-import java.util.jar.JarException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import java.util.Date;
 
 @Component
 public class JWTUtil {
 
-    private final String secret ="zidioSecretKey";
-    private final long expiration = 86400000;
+    private final String secret = "zidioSecretKeyzidioSecretKeyzidioSecretKey"; // min 32 chars for HS512
+    private final long expiration = 86400000; // 1 day in ms
+
+    private final SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
 
     public String generateToken(String email, String role) {
         return Jwts.builder()
@@ -18,16 +21,26 @@ public class JWTUtil {
                 .claim("role", role)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(SignatureAlgorithm.HS512, secret)
+                .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 
     public String extractUsername(String token) {
-        return Jwts.parser().setSigningKey(secret)
-                .parseClaimsJws(token).getBody().getSubject();
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
     }
-    public boolean validationToken(String token) throws JarException {
-        Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
-        return true;
+
+    public boolean validationToken(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            return true;
+        } catch (JwtException e) {
+            // log if needed
+            return false;
+        }
     }
 }
