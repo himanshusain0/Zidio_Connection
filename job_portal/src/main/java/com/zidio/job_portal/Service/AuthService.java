@@ -1,4 +1,5 @@
 package com.zidio.job_portal.Service;
+
 import com.zidio.job_portal.DTO.AuthResponse;
 import com.zidio.job_portal.DTO.LoginRequest;
 import com.zidio.job_portal.DTO.RegisterRequest;
@@ -20,34 +21,31 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request){
         User user = new User();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole());
+        user.setName(request.name);
+        user.setEmail(request.email);
+        user.setPassword(passwordEncoder.encode(request.password));
+        user.setRole(request.role);
         userRepository.save(user);
-
-        String token = jwtUtil.generateToken( user.getEmail(),user.getRole().name());
-        return  new AuthResponse(token);
-
+        String token = jwtUtil.generateToken(user.getEmail(),user.getRole().name());
+        return AuthResponse.builder()
+                .token(token)
+                .role(user.getRole())
+                .message("Registration successful")
+                .build();
 
     }
-
-
-    public AuthResponse login(LoginRequest request) {
-
-        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new RuntimeException("User not found"));
-
-
-        if(!passwordEncoder.matches(request.getPassword(), user.getPassword()))
+    public AuthResponse login (LoginRequest request){
+        User user = userRepository.findByEmail(request.email).orElseThrow(()-> new RuntimeException("User not found") );
+        if(!passwordEncoder.matches(request.password,user.getPassword()))
             throw new RuntimeException("Invalid credentials");
-
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return new AuthResponse(token);
-
+        return AuthResponse.builder()
+                .token(token)
+                .role(user.getRole())
+                .message("Login successful")
+                .build();
 
     }
-
 }
